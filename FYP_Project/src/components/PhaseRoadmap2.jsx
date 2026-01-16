@@ -70,7 +70,8 @@ const PhaseRoadmap2 = ({ language, setLanguage, onSelectChallenge, onClose, onOp
   };
 
   return (
-    <div className="fixed inset-0 z-[50] flex flex-col items-center justify-center w-full bg-[#1a1b26] p-4 font-mono select-none" style={{ minHeight: '100vh' }}>
+    <div className="fixed inset-0 z-[40] flex flex-col items-center justify-center w-full bg-[#1a1b26] p-4 font-mono select-none" style={{ minHeight: '100vh' }}>
+      {/* ★ 降低 z-index 到 z-[40]，確保背包界面 (z-50) 可以覆蓋它 */}
       {/* 语言切换 - 左上角 */}
       <div className="absolute top-4 left-4 z-[60]">
         <div className="flex gap-2">

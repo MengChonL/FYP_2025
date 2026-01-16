@@ -5,6 +5,8 @@ import ChallengeTemplate from './ChallengeTemplate';
 import ChallengeResultScreen from './ChallengeResultScreen';
 import BrowserFrame from './BrowserFrame';
 import MetaMaskFox from '../../assets/MetaMask_Fox.png';
+import SignInRequest from '../../assets/Sign-inRequest.png';
+import Permission01 from '../../assets/permission01.png';
 
 // Icons components
 const WarningIcon = () => (
@@ -596,12 +598,6 @@ Transaction Fee (Gas):
           showValue: true,
           details: (
             <div className="mt-2">
-              <pre className="bg-gray-800 p-4 rounded-lg text-sm text-gray-300 overflow-x-auto mb-3">
-                {contract.content}
-              </pre>
-              <p className="text-gray-300 leading-relaxed mb-4">
-                {language === 'chinese' ? contract.explanationZh : contract.explanationEn}
-              </p>
               {detailed && (
                 <div className="bg-gray-800/50 p-4 rounded-lg space-y-3">
                   <div>
@@ -699,16 +695,10 @@ Transaction Fee (Gas):
           showValue: true,
           details: (
             <div className="mt-2">
-              <pre className="bg-gray-800 p-4 rounded-lg text-sm text-gray-300 overflow-x-auto mb-3">
-                {contract.content}
-              </pre>
               <p className="text-lg font-semibold text-green-300 mb-2">
                 {language === 'chinese' ? '正確答案' : 'Correct Answer'}: {language === 'chinese' 
                   ? (contract.type === 'connect' ? '連接內容' : '授權內容')
                   : (contract.type === 'connect' ? 'Connection' : 'Authorization')}
-              </p>
-              <p className="text-gray-300 leading-relaxed mb-4">
-                {language === 'chinese' ? contract.explanationZh : contract.explanationEn}
               </p>
               {detailed && (
                 <div className="bg-gray-800/50 p-4 rounded-lg space-y-3">
@@ -848,140 +838,27 @@ Transaction Fee (Gas):
 
     const renderMetaMaskNotification = () => {
       if (contract.id === 1) {
+        // 连接内容 - 使用 Sign-inRequest 图片
         return (
-          <div className="space-y-6">
-            {/* MetaMask 通知样式 - 合约1 */}
-            <div className="bg-white border-2 border-gray-200 rounded-xl p-6 shadow-md">
-              <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-200">
-                <img src={MetaMaskFox} alt="MetaMask" className="w-10 h-10" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }} />
-                <h4 className="text-lg font-bold" style={{ color: '#7c3aed' }}>MetaMask Notification</h4>
-              </div>
-              <div className="space-y-3">
-                <div className="text-sm text-gray-700 font-mono leading-relaxed">
-                  <p className="mb-2">opensea.io wants you to sign in with your account:</p>
-                  <p className="font-semibold mb-4">0x742d35Cc6634C0532925a3b8D4C9Fb2f2e2f0891</p>
-                  <p className="mb-4">Click to sign in and accept the OpenSea Terms of Service (https://opensea.io/tos) and Privacy Policy (https://opensea.io/privacy).</p>
-                  <div className="space-y-1 text-xs bg-gray-50 p-4 rounded border border-gray-200">
-                    <p><span className="font-semibold">URI:</span> https://opensea.io/</p>
-                    <p><span className="font-semibold">Version:</span> 1</p>
-                    <p><span className="font-semibold">Chain ID:</span> 1</p>
-                    <p><span className="font-semibold">Nonce:</span> 6rrg7il05ub2slhdcquidmqe83</p>
-                    <p><span className="font-semibold">Issued At:</span> 2026-01-02T11:48:08.289Z</p>
-                  </div>
-                  <div className="flex gap-4 mt-6 pt-4 border-t border-gray-200 justify-center">
-                    <button 
-                      ref={(el) => {
-                        if (el) {
-                          el.style.setProperty('background-color', '#000000', 'important');
-                          el.style.setProperty('color', '#ffffff', 'important');
-                          el.style.setProperty('border', 'none', 'important');
-                        }
-                      }}
-                      className="px-6 py-2 rounded-lg font-semibold transition-all" 
-                      style={{ 
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
-                      }}
-                      onMouseEnter={(e) => { 
-                        e.currentTarget.style.setProperty('background-color', '#1a1a1a', 'important');
-                      }}
-                      onMouseLeave={(e) => { 
-                        e.currentTarget.style.setProperty('background-color', '#000000', 'important');
-                      }}
-                    >
-                      Cancel
-                    </button>
-                    <button 
-                      ref={(el) => {
-                        if (el) {
-                          el.style.setProperty('background-color', '#000000', 'important');
-                          el.style.setProperty('color', '#ffffff', 'important');
-                          el.style.setProperty('border', 'none', 'important');
-                        }
-                      }}
-                      className="px-6 py-2 rounded-lg font-semibold transition-all" 
-                      style={{ 
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
-                      }}
-                      onMouseEnter={(e) => { 
-                        e.currentTarget.style.setProperty('background-color', '#1a1a1a', 'important');
-                      }}
-                      onMouseLeave={(e) => { 
-                        e.currentTarget.style.setProperty('background-color', '#000000', 'important');
-                      }}
-                    >
-                      Connect
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div className="flex justify-center items-center w-full">
+            <img 
+              src={SignInRequest} 
+              alt="Sign-in Request" 
+              className="max-w-full h-auto rounded-lg shadow-lg"
+              style={{ maxHeight: '70vh' }}
+            />
           </div>
         );
       } else if (contract.id === 2) {
+        // 授权内容 - 使用 permission01 图片
         return (
-          <div className="space-y-6">
-            {/* MetaMask 通知样式 - 合约2 */}
-            <div className="bg-white border-2 border-gray-200 rounded-xl p-6 shadow-md">
-              <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-200">
-                <img src={MetaMaskFox} alt="MetaMask" className="w-10 h-10" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }} />
-                <h4 className="text-lg font-bold" style={{ color: '#7c3aed' }}>MetaMask Notification</h4>
-              </div>
-              <div className="space-y-3">
-                <div className="text-sm text-gray-700 font-mono leading-relaxed">
-                  <p className="mb-4">Give permission to access your USDT</p>
-                  <p className="mb-2">Grant access to:</p>
-                  <p className="font-semibold mb-6">Uniswap V3 Router</p>
-                  <div className="mb-4">
-                    <p className="mb-1">Transaction Fee (Gas):</p>
-                    <p className="font-semibold">0.002 ETH ($3.50)</p>
-                  </div>
-                  <div className="flex gap-4 mt-6 pt-4 border-t border-gray-200 justify-center">
-                    <button 
-                      ref={(el) => {
-                        if (el) {
-                          el.style.setProperty('background-color', '#000000', 'important');
-                          el.style.setProperty('color', '#ffffff', 'important');
-                          el.style.setProperty('border', 'none', 'important');
-                        }
-                      }}
-                      className="px-6 py-2 rounded-lg font-semibold transition-all" 
-                      style={{ 
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
-                      }}
-                      onMouseEnter={(e) => { 
-                        e.currentTarget.style.setProperty('background-color', '#1a1a1a', 'important');
-                      }}
-                      onMouseLeave={(e) => { 
-                        e.currentTarget.style.setProperty('background-color', '#000000', 'important');
-                      }}
-                    >
-                      Reject
-                    </button>
-                    <button 
-                      ref={(el) => {
-                        if (el) {
-                          el.style.setProperty('background-color', '#000000', 'important');
-                          el.style.setProperty('color', '#ffffff', 'important');
-                          el.style.setProperty('border', 'none', 'important');
-                        }
-                      }}
-                      className="px-6 py-2 rounded-lg font-semibold transition-all" 
-                      style={{ 
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
-                      }}
-                      onMouseEnter={(e) => { 
-                        e.currentTarget.style.setProperty('background-color', '#1a1a1a', 'important');
-                      }}
-                      onMouseLeave={(e) => { 
-                        e.currentTarget.style.setProperty('background-color', '#000000', 'important');
-                      }}
-                    >
-                      Confirm
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div className="flex justify-center items-center w-full">
+            <img 
+              src={Permission01} 
+              alt="Permission Request" 
+              className="max-w-full h-auto rounded-lg shadow-lg"
+              style={{ maxHeight: '70vh' }}
+            />
           </div>
         );
       }
@@ -1019,13 +896,14 @@ Transaction Fee (Gas):
               <div className="grid grid-cols-2 gap-4">
                 <button
                   onClick={() => handleSelectAnswer(contract.id, 'connect')}
-                  className={`p-6 rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98] ${
+                  className={`p-6 rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden ${
                     isSelectedConnect
-                      ? 'bg-black text-white shadow-lg'
+                      ? 'bg-gradient-to-br from-green-600 to-green-700 text-white border-4 border-green-400'
                       : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
                   }`}
                   style={isSelectedConnect ? {
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+                    boxShadow: '0 0 30px rgba(34, 197, 94, 0.8), 0 8px 24px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.2)',
+                    animation: 'pulse-glow 2s ease-in-out infinite'
                   } : {}}
                   onMouseEnter={(e) => {
                     if (!isSelectedConnect) {
@@ -1038,10 +916,17 @@ Transaction Fee (Gas):
                     }
                   }}
                 >
-                  <div className="text-xl font-bold mb-2">
+                  {isSelectedConnect && (
+                    <div className="absolute top-2 right-2">
+                      <svg className="w-8 h-8 text-white drop-shadow-lg" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
+                  <div className={`text-xl font-bold mb-2 ${isSelectedConnect ? 'text-white' : ''}`}>
                     {language === 'chinese' ? '連接內容' : 'Connection'}
                   </div>
-                  <div className="text-sm opacity-90">
+                  <div className={`text-sm ${isSelectedConnect ? 'text-white opacity-95' : 'opacity-90'}`}>
                     {language === 'chinese' 
                       ? '僅讀取帳戶信息，不涉及資產轉移'
                       : 'Read account info only, no asset transfer'}
@@ -1050,13 +935,14 @@ Transaction Fee (Gas):
                 
                 <button
                   onClick={() => handleSelectAnswer(contract.id, 'authorize')}
-                  className={`p-6 rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98] ${
+                  className={`p-6 rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden ${
                     isSelectedAuthorize
-                      ? 'bg-black text-white shadow-lg'
+                      ? 'bg-gradient-to-br from-red-600 to-red-700 text-white border-4 border-red-400'
                       : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
                   }`}
                   style={isSelectedAuthorize ? {
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+                    boxShadow: '0 0 30px rgba(239, 68, 68, 0.8), 0 8px 24px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.2)',
+                    animation: 'pulse-glow-red 2s ease-in-out infinite'
                   } : {}}
                   onMouseEnter={(e) => {
                     if (!isSelectedAuthorize) {
@@ -1069,10 +955,17 @@ Transaction Fee (Gas):
                     }
                   }}
                 >
-                  <div className="text-xl font-bold mb-2">
+                  {isSelectedAuthorize && (
+                    <div className="absolute top-2 right-2">
+                      <svg className="w-8 h-8 text-white drop-shadow-lg" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
+                  <div className={`text-xl font-bold mb-2 ${isSelectedAuthorize ? 'text-white' : ''}`}>
                     {language === 'chinese' ? '授權內容' : 'Authorization'}
                   </div>
-                  <div className="text-sm opacity-90">
+                  <div className={`text-sm ${isSelectedAuthorize ? 'text-white opacity-95' : 'opacity-90'}`}>
                     {language === 'chinese' 
                       ? '涉及資產操作，如轉移代幣、批准花費'
                       : 'Involves asset operations, e.g., transfer tokens, approve spending'}
@@ -1352,13 +1245,32 @@ Transaction Fee (Gas):
   };
 
   return (
-    <ChallengeTemplate
-      language={language}
-      setLanguage={setLanguage}
-      containerMaxWidth="100vw"
-      containerMaxHeight="100vh"
-      openBackpack={openBackpack}
-    >
+    <>
+      <style>{`
+        @keyframes pulse-glow {
+          0%, 100% {
+            box-shadow: 0 0 30px rgba(34, 197, 94, 0.8), 0 8px 24px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.2);
+          }
+          50% {
+            box-shadow: 0 0 50px rgba(34, 197, 94, 1), 0 8px 24px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.2);
+          }
+        }
+        @keyframes pulse-glow-red {
+          0%, 100% {
+            box-shadow: 0 0 30px rgba(239, 68, 68, 0.8), 0 8px 24px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.2);
+          }
+          50% {
+            box-shadow: 0 0 50px rgba(239, 68, 68, 1), 0 8px 24px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.2);
+          }
+        }
+      `}</style>
+      <ChallengeTemplate
+        language={language}
+        setLanguage={setLanguage}
+        containerMaxWidth="100vw"
+        containerMaxHeight="100vh"
+        openBackpack={openBackpack}
+      >
       {/* 道具提醒消息框 */}
       {renderItemReminder()}
       
@@ -1605,7 +1517,8 @@ Transaction Fee (Gas):
           }
         />
       )}
-    </ChallengeTemplate>
+      </ChallengeTemplate>
+    </>
   );
 };
 

@@ -65,6 +65,45 @@ const CustomStyles = () => (
     .animate-fade-in {
       animation: fadeIn 0.3s ease-out forwards;
     }
+
+    /* 語言切換：沿用標題的精緻感，像文字分段而非按鈕 */
+    .lang-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-size: 12px;
+      color: rgba(148, 163, 184, 0.95); /* slate-400 */
+      user-select: none;
+    }
+
+    .lang-toggle__item {
+      cursor: pointer;
+      padding: 4px 2px;
+      border-radius: 6px;
+      transition: color 150ms ease, opacity 150ms ease, text-shadow 150ms ease;
+      outline: none;
+    }
+
+    .lang-toggle__item:hover {
+      color: rgba(226, 232, 240, 1); /* slate-200 */
+    }
+
+    .lang-toggle__item:focus-visible {
+      box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.25); /* yellow */
+    }
+
+    .lang-toggle__item--active {
+      color: rgba(250, 204, 21, 1); /* yellow-400 */
+      text-shadow: 0 0 18px rgba(250, 204, 21, 0.25);
+    }
+
+    .lang-toggle__sep {
+      opacity: 0.35;
+    }
   `}</style>
 );
 
@@ -118,14 +157,45 @@ const checkCollision = (strokeBounds, targetId) => {
 // 2. 目標註冊表
 // ==========================================
 const TARGETS = [
-  { id: 'target-url', reason: '偽造網域 (URL Spoofing)' },
-  { id: 'target-spender', reason: '惡意授權地址 (Malicious Spender)' },
-  { id: 'target-unlimited', reason: '惡意的無限授權 (Unlimited Approval)' },
-  { id: 'target-tvl', reason: '虛假價格數據：比特幣價格固定不變 (Fake Static Price)' },
-  { id: 'target-apy', reason: '不可能的無風險收益' },
-  { id: 'target-kyc', reason: '矛盾的 KYC 機制：中心化業務卻免 KYC' },
-  { id: 'target-mas', reason: '虛假 MAS 牌照：無法在新加坡金管局官網查詢到此平台' },
-  { id: 'target-partners', reason: '虛假合作夥伴' },
+  {
+    id: 'target-phish-method',
+    reasonZh: 'Security Update 應在官網或 App Store/Google Play 更新，而非透過授權更新',
+    reasonEn: 'Security updates should be done via official website or App Store/Google Play, not through authorization',
+    detailZh: 'Security Update 應該在官網或者 Google Store、App Store 等地方進行更新，而非透過授權更新',
+    detailEn: 'Security Update should be done via official website or Google Store, App Store, etc., not through authorization',
+  },
+  {
+    id: 'target-phish-gasfee',
+    reasonZh: '前端顯示連接錢包，但實際是授權內容：Gas Fee 顯示表示這是交易而非連接',
+    reasonEn: 'UI shows "connect wallet" but content is authorization: Gas Fee indicates this is a transaction, not connection',
+    detailZh: '已發現網站前端顯示連接錢包，實際卻是授權內容',
+    detailEn: 'Found: Website frontend shows "connect wallet" but the actual content is authorization',
+  },
+  {
+    id: 'target-tvl',
+    reasonZh: '虛假價格數據：比特幣價格固定不變 (Fake Static Price)',
+    reasonEn: 'Fake price data: static BTC price (never updates)',
+  },
+  {
+    id: 'target-apy',
+    reasonZh: '不可能的無風險收益',
+    reasonEn: 'Impossible "zero-risk" yield claim',
+  },
+  {
+    id: 'target-kyc',
+    reasonZh: '矛盾的 KYC 機制：中心化業務卻免 KYC',
+    reasonEn: 'Contradictory KYC claim: centralized custody + "no-KYC"',
+  },
+  {
+    id: 'target-mas',
+    reasonZh: '虛假 MAS 牌照：無法在新加坡金管局官網查詢到此平台',
+    reasonEn: 'Fake MAS license claim (not verifiable on MAS website)',
+  },
+  {
+    id: 'target-partners',
+    reasonZh: '虛假合作夥伴',
+    reasonEn: 'Fake / unverified partners',
+  },
 ];
 
 // ==========================================
@@ -195,7 +265,7 @@ const DrawingCanvas = ({ isEnabled, width, height, targets, onValidation }) => {
     for (const target of targets) {
       const result = checkCollision(strokeBounds, target.id);
       if (result.found) {
-        onValidation(target.id, true, `發現：${target.reason}`);
+        onValidation(target.id, true);
         hit = true;
 
         const ctx = contextRef.current;
@@ -211,7 +281,7 @@ const DrawingCanvas = ({ isEnabled, width, height, targets, onValidation }) => {
     }
 
     if (!hit) {
-      onValidation(null, false, '未命中任何特徵');
+      onValidation(null, false);
       setTimeout(() => {
         const ctx = contextRef.current;
         if (!ctx) return;
@@ -226,7 +296,8 @@ const DrawingCanvas = ({ isEnabled, width, height, targets, onValidation }) => {
       onMouseDown={startDrawing}
       onMouseUp={finishDrawing}
       onMouseMove={draw}
-      className={`absolute top-0 left-0 z-[70] ${isEnabled ? 'pointer-events-auto cursor-pen' : 'pointer-events-none'}`}
+      // ★ 關鍵修改：將 z-[70] 改為 z-[120]，確保它永遠在 Modal 之上
+      className={`absolute top-0 left-0 z-[120] ${isEnabled ? 'pointer-events-auto cursor-pen' : 'pointer-events-none'}`}
       style={{ width, height }}
     />
   );
@@ -235,125 +306,156 @@ const DrawingCanvas = ({ isEnabled, width, height, targets, onValidation }) => {
 // ==========================================
 // 4. 模擬 MetaMask 組件
 // ==========================================
+// ==========================================
+// 4. 模擬 MetaMask 組件 (更新：Security Update 釣魚介面)
+// ==========================================
+// ==========================================
+// 4. 模擬 MetaMask 組件 (更新：置中、放大、修復重疊)
+// ==========================================
+// ==========================================
+// 4. 模擬 MetaMask 組件 (修復：層級阻擋 與 圖標重疊)
+// ==========================================
+// ==========================================
+// 4. 模擬 MetaMask 組件 (最終修復版：解決重疊與遮擋)
+// ==========================================
 const FakeMetaMask = ({ step, onConfirm, onCancel, foundTargets }) => {
   if (step === 'idle') return null;
 
   const isFound = (id) =>
     foundTargets.includes(id)
-      ? 'found-highlight ring-2 ring-green-500 rounded bg-green-50/10'
+      ? 'found-highlight ring-4 ring-green-500 rounded-lg relative z-50 bg-white shadow-[0_0_15px_rgba(34,197,94,0.4)]'
       : '';
 
   return (
-    <div className="fixed top-24 right-10 z-[60] w-[360px] bg-white text-black rounded-xl overflow-hidden shadow-2xl border border-gray-300 font-inter animate-fade-in text-left">
-      <div className="bg-gray-100 p-2 flex justify-between items-center border-b border-gray-200">
-        <div className="flex items-center gap-2">
-          <img
-            src={MetaMaskFox}
-            alt="MetaMask"
-            className="w-6 h-6 rounded-full border-2 border-orange-200"
-          />
-          <span className="text-xs text-gray-500 bg-gray-200 px-2 py-0.5 rounded-full">Ethereum Mainnet</span>
-        </div>
-        <div className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded border border-blue-200">Connected</div>
-      </div>
-
-      {step === 'signature' && (
-        <div>
-          <div className="p-4 text-center border-b border-gray-200">
-            <div className="w-10 h-10 bg-blue-500 rounded-full mx-auto mb-2 flex items-center justify-center text-white font-bold">O</div>
-            <h3 className="font-bold text-lg">Signature Request</h3>
-            <p className="text-gray-500 text-sm">opensea.io</p>
+    // Modal 層級 z-[100] (低於 Canvas z-120 和 控制台 z-130)
+    // ★ 關鍵修復：遮罩層使用 pointer-events-none，讓點擊穿透到底層控制台
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in px-4 pointer-events-none">
+      
+      {/* ★ 內容區域使用 pointer-events-auto，保持可點擊 */}
+      <div className="w-full max-w-[380px] bg-white text-black rounded-2xl overflow-hidden shadow-2xl border border-gray-300 font-inter text-center font-sans transform transition-all scale-100 md:scale-105 relative pointer-events-auto">
+        
+        {/* --- 頂部導航欄 --- */}
+        <div className="bg-white px-4 pt-4 pb-6 flex justify-between items-center border-b border-gray-100 relative z-10">
+          <div className="w-6"></div> 
+          <div className="flex flex-col items-center">
+             <div className="flex items-center gap-1.5 bg-gray-100 px-3 py-1 rounded-full cursor-pointer hover:bg-gray-200 transition-colors">
+                <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                <span className="text-[11px] text-gray-700 font-bold tracking-wide">Ethereum Main Network</span>
+                <svg className="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+             </div>
           </div>
-          <div className="p-4 bg-gray-50 text-xs font-mono text-gray-600 break-words border-b border-gray-200 max-h-48 overflow-y-auto text-left space-y-1">
-            <p className="font-bold mb-1">
-              opensea.io wants you to sign in with your account:
-            </p>
-            <p>0x742d35Cc6634C0532925a3b8D4C9Fb2f2e2f0891</p>
-            <p className="mt-2">
-              Click to sign in and accept the OpenSea Terms of Service (https://opensea-tos.io) and
-              Privacy Policy (https://Opensea-privacy.io).
-            </p>
-            <div
-              id="target-url"
-              className={`mt-3 p-2 border border-dashed border-gray-300 rounded hover:bg-red-50 transition-colors ${isFound('target-url')}`}
-            >
-              <p className="font-bold text-red-600">URI: https://opensea-verify-reward.io</p>
-              <p>Version: 1</p>
-              <p>Chain ID: 1</p>
-              <p>Nonce: 6rrg7il05ub2slhdcquidmqe83</p>
-              <p>Issued At: 2026-01-05T12:26:08.289Z</p>
-            </div>
-          </div>
-          <div className="p-4 flex gap-4">
-            <button onClick={onCancel} className="flex-1 py-2 border rounded-full font-bold text-gray-600 hover:bg-gray-50">Cancel</button>
-            <button onClick={onConfirm} className="flex-1 py-2 bg-blue-600 text-black rounded-full font-bold hover:bg-blue-700">Sign</button>
+          <div className="w-6 flex justify-end">
+             <button onClick={onCancel} className="text-gray-400 hover:text-gray-600">
+               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011-1.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+             </button>
           </div>
         </div>
-      )}
 
-      {step === 'approval' && (
-        <div>
-          <div className="p-4 text-center border-b border-gray-200">
-            <div className="w-10 h-10 border-2 border-red-500 rounded-full mx-auto mb-2 flex items-center justify-center text-red-500 font-bold">
-              !
-            </div>
-            <h3 className="font-bold text-lg">Spending Cap Request</h3>
-            <p className="text-gray-500 text-sm">https://Opensea-Sign.io</p>
+        {/* --- 狐狸頭像獨立空間區域 --- */}
+        {/* ★ 專門為狐狸頭像留出獨立空間，確保不與其他元素重疊 */}
+        <div className="relative w-full flex justify-center py-8 bg-white">
+          <div className="w-20 h-20 bg-white rounded-full border border-gray-200 flex items-center justify-center shadow-lg relative z-30">
+            <img src={MetaMaskFox} alt="MetaMask" className="w-12 h-12" />
           </div>
-          <div className="bg-gray-50 p-4 border-b border-gray-200 space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-bold">Asset</span>
-              <span className="font-bold text-sm text-green-600">USDC (Permit)</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-bold">Spender</span>
-              <span
-                id="target-spender"
-                className={`text-xs font-mono text-red-600 bg-red-50 px-2 py-1 rounded border border-red-200 inline-block ${isFound(
-                  'target-spender'
-                )}`}
+        </div>
+
+        {/* --- 核心內容區 --- */}
+        <div className="pt-4 pb-8 px-6 flex flex-col items-center gap-6 bg-white">
+          
+          {/* 1. 偽造的來源身份 (Identity Spoofing) */}
+          {/* ★ 增加上邊距，確保與狐狸頭像有足夠空間 */}
+          <div className="relative group w-full flex justify-center mt-4">
+              <div 
+                className="flex flex-col items-center pt-6 pb-5 px-8 border-2 border-[#037DD6] bg-[#F2F8FD] rounded-2xl w-full max-w-[280px] relative"
               >
-                0x9110...0666
-              </span>
-            </div>
-            <div className="mt-2">
-              <span className="text-sm font-bold block mb-1">Custom spending cap</span>
-              <div
-                id="target-unlimited"
-                className={`text-xs font-mono px-2 py-1 rounded border inline-block ${
-                  isFound('target-unlimited')
-                    ? 'border-red-400 bg-red-50 text-red-600'
-                    : 'border-gray-300 bg-white text-gray-700'
-                }`}
-              >
-                Unlimited
+                  <div className="flex items-center gap-1.5 text-lg font-extrabold text-gray-800">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                      metamask.io
+                  </div>
+                  <div className="text-xs text-[#037DD6] font-bold mt-1.5 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-[#037DD6]"></span>
+                    Ethereum
+                  </div>
               </div>
-            </div>
-            <div className="mt-2 text-[11px] text-gray-500">
-              <p>Gas estimate: 0 (signature only)</p>
-              <p>Network: Ethereum Mainnet (Chain ID: 1)</p>
-            </div>
           </div>
-          <div className="p-4 flex gap-4">
-            <button
-              onClick={onCancel}
-              className="flex-1 py-2 border rounded-full font-bold text-gray-600 hover:bg-gray-50"
+
+          {/* 2. 偽造的方法名稱 (Method Name) */}
+          <div className="w-full flex justify-center">
+              <div 
+                id="target-phish-method" 
+                className={`px-6 py-2 border-2 border-[#FFA000] text-[#D97706] font-extrabold text-xs rounded-full bg-white shadow-sm uppercase tracking-widest ${isFound('target-phish-method')}`}
+              >
+                  Security Update
+              </div>
+          </div>
+
+          {/* 3. 偽造的金額 */}
+          <div className="flex flex-col items-center justify-center">
+              <div id="target-phish-amount" className={`text-center p-2 rounded-xl transition-all ${isFound('target-phish-amount')}`}>
+                  <div className="text-5xl font-light text-gray-900 tracking-tight font-sans">0.00123 ETH</div>
+                  <div className="text-gray-500 text-base mt-2 font-medium">$3.42 USD</div>
+              </div>
+          </div>
+          
+          {/* --- 詳細資訊區 --- */}
+          <div className="w-full bg-gray-50 rounded-xl border border-gray-200 p-4 text-left shadow-inner">
+               <div className="flex justify-between items-center mb-3">
+                   <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-600 border-2 border-white shadow-sm scale-110"></div>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-gray-800">Account 1</span>
+                        <span className="text-xs text-gray-500 font-mono">0x71C...9A23</span>
+                      </div>
+                   </div>
+               </div>
+               <div className="border-t border-gray-200 my-3"></div>
+               {/* ★ Gas Fee 區域：前端顯示連接錢包，但實際是授權內容 */}
+               <div 
+                 id="target-phish-gasfee"
+                 className={`flex justify-between items-start text-xs p-2 rounded-lg transition-all ${isFound('target-phish-gasfee')}`}
+               >
+                   <div className="flex flex-col gap-1">
+                      <span className="font-bold text-gray-700 flex items-center gap-1 text-sm">
+                        Estimated gas fee
+                        <svg className="w-3.5 h-3.5 text-gray-400 cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      </span>
+                      <span className="text-[11px] text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded-md inline-block w-max">Likely in &lt; 30 seconds</span>
+                   </div>
+                   <div className="flex flex-col items-end gap-0.5">
+                      <span className="text-gray-900 font-bold text-sm">0.00042 ETH</span>
+                      <span className="text-gray-400 text-[10px]">Max fee: 0.0006 ETH</span>
+                   </div>
+               </div>
+               <div className="border-t border-gray-200 my-3"></div>
+               <div className="flex justify-between items-center mt-1">
+                  <span className="text-gray-900 font-bold text-base">Total</span>
+                  <div className="flex flex-col items-end">
+                    <span className="text-gray-900 font-bold text-base">0.00165 ETH</span>
+                    <span className="text-gray-500 text-[11px] font-medium">$4.58 USD</span>
+                  </div>
+               </div>
+          </div>
+
+          {/* --- 按鈕區 --- */}
+          <div className="flex gap-4 w-full">
+            <button 
+              onClick={onCancel} 
+              className="flex-1 py-4 border-2 border-gray-300 rounded-full font-bold text-gray-700 hover:bg-gray-50 hover:border-gray-400 text-sm transition-all active:scale-95 bg-white"
             >
               Reject
             </button>
-            <button
-              onClick={() => alert('【演練結束】')}
-              className="flex-1 py-2 bg-blue-600 text-black rounded-full font-bold hover:bg-blue-700"
+            <button 
+              onClick={onConfirm} 
+              className="flex-1 py-4 border-2 border-gray-300 rounded-full font-bold text-gray-700 hover:bg-gray-50 hover:border-gray-400 text-sm transition-all active:scale-95 bg-white"
             >
               Confirm
             </button>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };
-
 // ==========================================
 // 5. 核心場景組件 (QuantumFi)
 // ==========================================
@@ -383,7 +485,7 @@ const QuantumFiScam = () => {
     return () => window.removeEventListener('resize', updateSize);
   }, [status]);
 
-  const handleValidation = (targetId, isHit, msg) => {
+  const handleValidation = (targetId, isHit) => {
     if (attempts <= 0 || isFinished) {
       return;
     }
@@ -403,10 +505,32 @@ const QuantumFiScam = () => {
       } else {
         newFoundTargets.push(targetId);
         setFoundTargets(newFoundTargets);
-        setToast({ msg: `🎉 ${msg}`, type: 'success' });
+        const target = TARGETS.find((t) => t.id === targetId);
+        // ★ 為新目標顯示詳細說明
+        let reason;
+        if (targetId === 'target-phish-method') {
+          reason = language === 'chinese'
+            ? '已發現：Security Update 應該在官網或者 Google Store、App Store 等地方進行更新，而非透過授權更新'
+            : 'Found: Security Update should be done via official website or Google Store, App Store, etc., not through authorization';
+        } else if (targetId === 'target-phish-gasfee') {
+          reason = language === 'chinese'
+            ? '已發現：網站前端顯示連接錢包，實際卻是授權內容'
+            : 'Found: Website frontend shows "connect wallet" but the actual content is authorization';
+        } else {
+          // 其他目標使用原本的 reason
+          reason =
+            language === 'chinese'
+              ? target?.reasonZh || '已發現可疑特徵'
+              : target?.reasonEn || 'Suspicious pattern found';
+        }
+        const prefix = language === 'chinese' ? '🎉 ' : '🎉 ';
+        setToast({ msg: `${prefix}${reason}`, type: 'success' });
       }
     } else {
-      setToast({ msg, type: 'info' });
+      setToast({
+        msg: language === 'chinese' ? '未命中任何特徵' : 'No red flags hit.',
+        type: 'info',
+      });
     }
     setAttempts(newAttempts);
     setTimeout(() => setToast(null), 2500);
@@ -509,54 +633,35 @@ const QuantumFiScam = () => {
 
     return (
       <div className="relative w-screen h-screen bg-slate-950 text-white overflow-hidden">
-        {/* 語言切換 + 返回 / 背包（沿用 ChallengeTemplate / JudgeAuth 的 pixel-button 風格） */}
-        <div className="absolute top-4 left-4 z-[110] flex gap-2">
-          <button
-            onClick={() => setLanguage('chinese')}
-            className="pixel-button"
-            style={{
-              padding: '8px 16px',
-              borderRadius: '4px',
-              transition: 'all 0.3s ease',
-              backgroundColor: language === 'chinese' ? '#22d3ee' : 'transparent',
-              color: language === 'chinese' ? '#ffffff' : '#9ca3af',
-              border: '2px solid #000',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontFamily: "'Courier New', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace",
-              fontWeight: 'bold',
-              textTransform: 'uppercase',
-              letterSpacing: '2px',
-              textShadow: '2px 2px 0px #000',
-              WebkitFontSmoothing: 'none',
-              MozOsxFontSmoothing: 'unset',
-            }}
-          >
-            中文
-          </button>
-          <button
-            onClick={() => setLanguage('english')}
-            className="pixel-button"
-            style={{
-              padding: '8px 16px',
-              borderRadius: '4px',
-              transition: 'all 0.3s ease',
-              backgroundColor: language === 'english' ? '#22d3ee' : 'transparent',
-              color: language === 'english' ? '#ffffff' : '#9ca3af',
-              border: '2px solid #000',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontFamily: "'Courier New', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace",
-              fontWeight: 'bold',
-              textTransform: 'uppercase',
-              letterSpacing: '2px',
-              textShadow: '2px 2px 0px #000',
-              WebkitFontSmoothing: 'none',
-              MozOsxFontSmoothing: 'unset',
-            }}
-          >
-            EN
-          </button>
+        <CustomStyles />
+
+        {/* 結果頁：只保留語言切換 */}
+        <div className="absolute top-4 left-4 z-[110] flex items-center gap-4">
+          <div className="lang-toggle" aria-label="Language switch">
+            <span
+              role="button"
+              tabIndex={0}
+              className={`lang-toggle__item ${language === 'chinese' ? 'lang-toggle__item--active' : ''}`}
+              onClick={() => setLanguage('chinese')}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') setLanguage('chinese');
+              }}
+            >
+              中文
+            </span>
+            <span className="lang-toggle__sep">/</span>
+            <span
+              role="button"
+              tabIndex={0}
+              className={`lang-toggle__item ${language === 'english' ? 'lang-toggle__item--active' : ''}`}
+              onClick={() => setLanguage('english')}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') setLanguage('english');
+              }}
+            >
+              EN
+            </span>
+          </div>
         </div>
         <div className="absolute top-4 right-4 z-[110] flex gap-2">
           <button
@@ -631,34 +736,11 @@ const QuantumFiScam = () => {
     <div id="scam-scroll-container" className="w-screen h-screen bg-slate-950 relative overflow-y-auto cursor-default font-inter text-white scroll-smooth">
       <CustomStyles />
 
-      {/* 語言切換 - 單獨給此關卡使用 */}
-      <div className="fixed top-4 left-4 z-[95] flex gap-2">
-        <button
-          onClick={() => setLanguage('chinese')}
-          className={`px-3 py-1 text-xs font-bold rounded border-2 ${
-            language === 'chinese'
-              ? 'bg-cyan-500 text-black border-black'
-              : 'bg-transparent text-slate-300 border-slate-500'
-          }`}
-        >
-          中文
-        </button>
-        <button
-          onClick={() => setLanguage('english')}
-          className={`px-3 py-1 text-xs font-bold rounded border-2 ${
-            language === 'english'
-              ? 'bg-cyan-500 text-black border-black'
-              : 'bg-transparent text-slate-300 border-slate-500'
-          }`}
-        >
-          EN
-        </button>
-      </div>
-
       {/* Toast Notification */}
+      {/* ★ 關鍵修復：z-index 提高到 z-[140]，確保在 MetaMask 彈窗 (z-100) 和控制台 (z-130) 之上 */}
       {toast && (
         <div
-          className={`fixed top-12 left-1/2 -translate-x-1/2 z-[90] px-6 py-3 rounded-full shadow-2xl font-bold flex items-center gap-2 transition-all transform hover:scale-105 animate-fade-in ${
+          className={`fixed top-12 left-1/2 -translate-x-1/2 z-[140] px-6 py-3 rounded-full shadow-2xl font-bold flex items-center gap-2 transition-all transform hover:scale-105 animate-fade-in ${
             toast.type === 'success'
               ? 'bg-green-500 text-white'
               : toast.type === 'warning'
@@ -671,14 +753,15 @@ const QuantumFiScam = () => {
       )}
 
       {/* 控制台 (增加 Attempts 顯示) */}
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[80] bg-slate-900/95 backdrop-blur-md border border-slate-700 rounded-2xl p-4 flex gap-4 shadow-[0_0_40px_rgba(0,0,0,0.5)] items-center">
+      {/* ★ 關鍵修復：z-index 提高到 z-[130]，確保在 MetaMask (z-100) 之上，可以點擊開啟紅筆檢視 */}
+      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[130] bg-slate-900/95 backdrop-blur-md border border-slate-700 rounded-2xl p-4 flex gap-4 shadow-[0_0_40px_rgba(0,0,0,0.5)] items-center">
         {/* Risk Found */}
         <div className="pl-2 pr-4 text-xs text-slate-400 border-r border-slate-600 flex flex-col items-center">
           <span className="uppercase tracking-widest text-[10px] font-bold text-slate-500">
             {t.riskFound}
           </span>
-          <span className={`font-black text-2xl ${foundTargets.length === 8 ? 'text-green-400' : 'text-white'}`}>
-            {foundTargets.length} <span className="text-slate-600 text-base">/ 8</span>
+          <span className={`font-black text-2xl ${foundTargets.length === 7 ? 'text-green-400' : 'text-white'}`}>
+            {foundTargets.length} <span className="text-slate-600 text-base">/ 7</span>
           </span>
         </div>
 
@@ -726,13 +809,42 @@ const QuantumFiScam = () => {
       {/* 導航欄 */}
       <nav className="border-b border-white/5 bg-black/40 backdrop-blur-md sticky top-0 z-40 w-screen flex justify-center">
         <div className="w-full max-w-[90rem] px-12 h-24 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <span className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 to-yellow-200 tracking-tight">
-              QuantumFi
-            </span>
-            <span className="bg-yellow-500/20 text-yellow-400 text-xs font-bold px-2 py-0.5 rounded border border-yellow-500/30 uppercase tracking-wider">
-              Beta
-            </span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 to-yellow-200 tracking-tight">
+                QuantumFi
+              </span>
+              <span className="bg-yellow-500/20 text-yellow-400 text-xs font-bold px-2 py-0.5 rounded border border-yellow-500/30 uppercase tracking-wider">
+                Beta
+              </span>
+            </div>
+
+            {/* 語言切換：在標題旁邊，像文字切換，不要明顯按鈕形狀 */}
+            <div className="lang-toggle" aria-label="Language switch">
+              <span
+                role="button"
+                tabIndex={0}
+                className={`lang-toggle__item ${language === 'chinese' ? 'lang-toggle__item--active' : ''}`}
+                onClick={() => setLanguage('chinese')}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') setLanguage('chinese');
+                }}
+              >
+                中文
+              </span>
+              <span className="lang-toggle__sep">/</span>
+              <span
+                role="button"
+                tabIndex={0}
+                className={`lang-toggle__item ${language === 'english' ? 'lang-toggle__item--active' : ''}`}
+                onClick={() => setLanguage('english')}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') setLanguage('english');
+                }}
+              >
+                EN
+              </span>
+            </div>
           </div>
           <button
             onClick={handleTrigger}
@@ -740,7 +852,7 @@ const QuantumFiScam = () => {
               educationMode ? 'opacity-50 cursor-crosshair' : 'hover:scale-105 active:scale-95'
             }`}
           >
-            連接錢包
+            {language === 'chinese' ? '連接錢包' : 'Connect Wallet'}
           </button>
         </div>
       </nav>
