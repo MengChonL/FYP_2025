@@ -63,6 +63,28 @@ const IdentifyMalicious = ({ config }) => {
   const [showItemReminder, setShowItemReminder] = useState(false);
   const [openBackpack, setOpenBackpack] = useState(false);
 
+  // Touch Drag State (for tablet/mobile support - Stage 1)
+  const [touchDragState, setTouchDragState] = useState({
+    isDragging: false,
+    item: null,
+    startX: 0,
+    startY: 0,
+    currentX: 0,
+    currentY: 0,
+    targetBox: null
+  });
+
+  // Touch Drag State (for tablet/mobile support - Stage 3)
+  const [touchFunctionDragState, setTouchFunctionDragState] = useState({
+    isDragging: false,
+    item: null,
+    startX: 0,
+    startY: 0,
+    currentX: 0,
+    currentY: 0,
+    targetFunctionId: null
+  });
+
   // 授權相關網址清單
   const authorizationUrls = [
     { id: 1, name: ' https://app.uniswap.org/swap', type: 'legit' },
@@ -323,7 +345,7 @@ Transaction Fee (Gas):
     setFunctionErrorItems([]);
   };
 
-  // Stage 3: 拖拽处理函数
+  // Stage 3: 拖拽处理函数 (Mouse/Desktop)
   const handleFunctionDragStart = (e, item) => {
     setDraggedItem(item);
     e.dataTransfer.effectAllowed = "move";
@@ -356,6 +378,111 @@ Transaction Fee (Gas):
 
     setDraggedItem(null);
   };
+
+  // Stage 3: Touch Handlers (Tablet/Mobile)
+  const handleFunctionTouchStart = (e, item) => {
+    const touch = e.touches[0];
+    setTouchFunctionDragState({
+      isDragging: true,
+      item: item,
+      startX: touch.clientX,
+      startY: touch.clientY,
+      currentX: touch.clientX,
+      currentY: touch.clientY,
+      targetFunctionId: null
+    });
+    e.preventDefault(); // Prevent scrolling while dragging
+  };
+
+  // Prevent default touch behavior on document when dragging (Stage 3)
+  useEffect(() => {
+    if (touchFunctionDragState.isDragging && stage === 3) {
+      const handleTouchMoveGlobal = (e) => {
+        if (!touchFunctionDragState.isDragging) return;
+        
+        const touch = e.touches[0];
+        const currentX = touch.clientX;
+        const currentY = touch.clientY;
+
+        // Find which function box the touch is over
+        const elements = document.elementsFromPoint(currentX, currentY);
+        let targetFunctionId = null;
+        
+        for (const el of elements) {
+          const functionId = el.getAttribute('data-function-drop-zone');
+          if (functionId) {
+            targetFunctionId = parseInt(functionId);
+            break;
+          }
+        }
+
+        setTouchFunctionDragState(prev => ({
+          ...prev,
+          currentX,
+          currentY,
+          targetFunctionId
+        }));
+        e.preventDefault(); // Prevent scrolling
+      };
+
+      const handleTouchEndGlobal = (e) => {
+        if (!touchFunctionDragState.isDragging || !touchFunctionDragState.item) {
+          setTouchFunctionDragState({
+            isDragging: false,
+            item: null,
+            startX: 0,
+            startY: 0,
+            currentX: 0,
+            currentY: 0,
+            targetFunctionId: null
+          });
+          return;
+        }
+
+        const item = touchFunctionDragState.item;
+        const targetFunctionId = touchFunctionDragState.targetFunctionId;
+
+        // 从所有位置移除
+        setFunctionItems(prev => prev.filter(i => i.id !== item.id));
+        setFunctionBoxes(prev => {
+          const newBoxes = { ...prev };
+          Object.keys(newBoxes).forEach(key => {
+            newBoxes[key] = newBoxes[key].filter(i => i.id !== item.id);
+          });
+          return newBoxes;
+        });
+
+        // 添加到目标函数框（如果有有效目标）
+        if (targetFunctionId) {
+          setFunctionBoxes(prev => ({
+            ...prev,
+            [targetFunctionId]: [...(prev[targetFunctionId] || []), item]
+          }));
+        } else {
+          // If dropped outside, return to center
+          setFunctionItems(prev => [...prev, item]);
+        }
+
+        // Reset touch drag state
+        setTouchFunctionDragState({
+          isDragging: false,
+          item: null,
+          startX: 0,
+          startY: 0,
+          currentX: 0,
+          currentY: 0,
+          targetFunctionId: null
+        });
+      };
+
+      document.addEventListener('touchmove', handleTouchMoveGlobal, { passive: false });
+      document.addEventListener('touchend', handleTouchEndGlobal, { passive: false });
+      return () => {
+        document.removeEventListener('touchmove', handleTouchMoveGlobal);
+        document.removeEventListener('touchend', handleTouchEndGlobal);
+      };
+    }
+  }, [touchFunctionDragState.isDragging, touchFunctionDragState.item, touchFunctionDragState.targetFunctionId, stage]);
 
   const handleFunctionItemBackToCenter = (e, item, functionId) => {
     e.preventDefault();
@@ -430,7 +557,7 @@ Transaction Fee (Gas):
     setShowResult(true);
   };
 
-  // Drag Handlers
+  // Drag Handlers (Mouse/Desktop - Stage 1)
   const handleDragStart = (e, item) => {
     setDraggedItem(item);
     e.dataTransfer.effectAllowed = "move";
@@ -460,6 +587,112 @@ Transaction Fee (Gas):
     }
     setDraggedItem(null);
   };
+
+  // Touch Handlers (Tablet/Mobile - Stage 1)
+  const handleTouchStart = (e, item) => {
+    const touch = e.touches[0];
+    setTouchDragState({
+      isDragging: true,
+      item: item,
+      startX: touch.clientX,
+      startY: touch.clientY,
+      currentX: touch.clientX,
+      currentY: touch.clientY,
+      targetBox: null
+    });
+    e.preventDefault(); // Prevent scrolling while dragging
+  };
+
+  // Prevent default touch behavior on document when dragging (Stage 1)
+  useEffect(() => {
+    if (touchDragState.isDragging && stage === 1) {
+      const handleTouchMoveGlobal = (e) => {
+        if (!touchDragState.isDragging) return;
+        
+        const touch = e.touches[0];
+        const currentX = touch.clientX;
+        const currentY = touch.clientY;
+
+        // Find which box the touch is over
+        const elements = document.elementsFromPoint(currentX, currentY);
+        let targetBox = null;
+        
+        for (const el of elements) {
+          if (el.getAttribute('data-drop-zone') === 'phishing') {
+            targetBox = 'phishing';
+            break;
+          } else if (el.getAttribute('data-drop-zone') === 'legit') {
+            targetBox = 'legit';
+            break;
+          } else if (el.getAttribute('data-drop-zone') === 'center') {
+            targetBox = 'center';
+            break;
+          }
+        }
+
+        setTouchDragState(prev => ({
+          ...prev,
+          currentX,
+          currentY,
+          targetBox
+        }));
+        e.preventDefault(); // Prevent scrolling
+      };
+
+      const handleTouchEndGlobal = (e) => {
+        if (!touchDragState.isDragging || !touchDragState.item) {
+          setTouchDragState({
+            isDragging: false,
+            item: null,
+            startX: 0,
+            startY: 0,
+            currentX: 0,
+            currentY: 0,
+            targetBox: null
+          });
+          return;
+        }
+
+        const item = touchDragState.item;
+        const targetBox = touchDragState.targetBox;
+
+        // Remove from all lists first
+        setItems(prev => prev.filter(i => i.id !== item.id));
+        setPhishingBox(prev => prev.filter(i => i.id !== item.id));
+        setLegitBox(prev => prev.filter(i => i.id !== item.id));
+
+        // Add to target (if valid target, otherwise return to center)
+        if (targetBox === 'phishing') {
+          setPhishingBox(prev => [...prev, item]);
+        } else if (targetBox === 'legit') {
+          setLegitBox(prev => [...prev, item]);
+        } else if (targetBox === 'center') {
+          setItems(prev => [...prev, item]);
+        } else {
+          // If dropped outside, return to center
+          setItems(prev => [...prev, item]);
+        }
+
+        // Reset touch drag state
+        setTouchDragState({
+          isDragging: false,
+          item: null,
+          startX: 0,
+          startY: 0,
+          currentX: 0,
+          currentY: 0,
+          targetBox: null
+        });
+      };
+
+      document.addEventListener('touchmove', handleTouchMoveGlobal, { passive: false });
+      document.addEventListener('touchend', handleTouchEndGlobal, { passive: false });
+      return () => {
+        document.removeEventListener('touchmove', handleTouchMoveGlobal);
+        document.removeEventListener('touchend', handleTouchEndGlobal);
+      };
+    }
+  }, [touchDragState.isDragging, touchDragState.item, touchDragState.targetBox, stage]);
 
   // Stage 1: 检查域名分类结果
   const checkResult = () => {
@@ -1114,8 +1347,17 @@ Transaction Fee (Gas):
                       <div
                         key={func.id}
                         className="bg-blue-900/20 border-4 border-blue-500 flex flex-col transition-colors hover:bg-blue-900/30 min-h-[150px]"
+                        data-function-drop-zone={func.id}
                         onDragOver={handleFunctionDragOver}
                         onDrop={(e) => handleFunctionDrop(e, func.id)}
+                        style={{
+                          borderColor: touchFunctionDragState.isDragging && touchFunctionDragState.targetFunctionId === func.id
+                            ? '#fbbf24'
+                            : '#3b82f6',
+                          borderWidth: touchFunctionDragState.isDragging && touchFunctionDragState.targetFunctionId === func.id
+                            ? '6px'
+                            : '4px'
+                        }}
                       >
                         <div className="bg-blue-500 text-white font-bold text-sm p-2 text-center uppercase">
                           {func.name}
@@ -1156,7 +1398,18 @@ Transaction Fee (Gas):
                         key={item.id}
                         draggable
                         onDragStart={(e) => handleFunctionDragStart(e, item)}
-                        className="bg-slate-700 p-3 text-white text-sm shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] cursor-grab active:cursor-grabbing hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,0.3)] transition-all border-2 border-slate-500"
+                        onTouchStart={(e) => handleFunctionTouchStart(e, item)}
+                        className="bg-slate-700 p-3 text-white text-sm shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] cursor-grab active:cursor-grabbing hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,0.3)] transition-all border-2 border-slate-500 touch-none select-none"
+                        style={{
+                          userSelect: 'none',
+                          WebkitUserSelect: 'none',
+                          WebkitTouchCallout: 'none',
+                          transform: touchFunctionDragState.isDragging && touchFunctionDragState.item?.id === item.id
+                            ? `translate(${touchFunctionDragState.currentX - touchFunctionDragState.startX}px, ${touchFunctionDragState.currentY - touchFunctionDragState.startY}px)`
+                            : undefined,
+                          opacity: touchFunctionDragState.isDragging && touchFunctionDragState.item?.id === item.id ? 0.7 : 1,
+                          zIndex: touchFunctionDragState.isDragging && touchFunctionDragState.item?.id === item.id ? 1000 : 1
+                        }}
                       >
                         {language === 'chinese' ? item.descriptionZh : item.descriptionEn}
                       </div>
@@ -1310,8 +1563,17 @@ Transaction Fee (Gas):
                   {/* Red Box - Phishing */}
                   <div 
                     className="flex-1 bg-red-900/20 border-4 border-red-500 flex flex-col transition-colors hover:bg-red-900/30"
+                    data-drop-zone="phishing"
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, 'phishing')}
+                    style={{
+                      borderColor: touchDragState.isDragging && touchDragState.targetBox === 'phishing' 
+                        ? '#fbbf24' 
+                        : '#ef4444',
+                      borderWidth: touchDragState.isDragging && touchDragState.targetBox === 'phishing' 
+                        ? '6px' 
+                        : '4px'
+                    }}
                   >
                     {/* Pixel X background */}
                     <div className="absolute inset-0 opacity-10 pointer-events-none"
@@ -1334,7 +1596,13 @@ Transaction Fee (Gas):
                           key={item.id} 
                           draggable 
                           onDragStart={(e) => handleDragStart(e, item)}
-                          className="bg-red-500/10 p-3 text-red-300 border-2 border-red-500/50 cursor-grab active:cursor-grabbing hover:bg-red-500/20 flex items-start"
+                          onTouchStart={(e) => handleTouchStart(e, item)}
+                          className="bg-red-500/10 p-3 text-red-300 border-2 border-red-500/50 cursor-grab active:cursor-grabbing hover:bg-red-500/20 flex items-start touch-none select-none"
+                          style={{
+                            userSelect: 'none',
+                            WebkitUserSelect: 'none',
+                            WebkitTouchCallout: 'none'
+                          }}
                         >
                           <AlertIconSmall />
                           <span className="text-sm">{item.name}</span>
@@ -1346,8 +1614,17 @@ Transaction Fee (Gas):
                   {/* Center - Source */}
                   <div 
                     className="flex-1 flex flex-col bg-slate-800 border-4 border-slate-600 p-4"
+                    data-drop-zone="center"
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, 'center')}
+                    style={{
+                      borderColor: touchDragState.isDragging && touchDragState.targetBox === 'center' 
+                        ? '#fbbf24' 
+                        : '#475569',
+                      borderWidth: touchDragState.isDragging && touchDragState.targetBox === 'center' 
+                        ? '6px' 
+                        : '4px'
+                    }}
                   >
                     <div className="flex-1 overflow-y-auto space-y-3 p-2">
                       {items.map(item => (
@@ -1355,7 +1632,18 @@ Transaction Fee (Gas):
                           key={item.id} 
                           draggable 
                           onDragStart={(e) => handleDragStart(e, item)}
-                          className="bg-slate-700 p-3 text-white text-center shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] cursor-grab active:cursor-grabbing hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,0.3)] transition-all border-2 border-slate-500"
+                          onTouchStart={(e) => handleTouchStart(e, item)}
+                          className="bg-slate-700 p-3 text-white text-center shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] cursor-grab active:cursor-grabbing hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,0.3)] transition-all border-2 border-slate-500 touch-none select-none"
+                          style={{
+                            userSelect: 'none',
+                            WebkitUserSelect: 'none',
+                            WebkitTouchCallout: 'none',
+                            transform: touchDragState.isDragging && touchDragState.item?.id === item.id
+                              ? `translate(${touchDragState.currentX - touchDragState.startX}px, ${touchDragState.currentY - touchDragState.startY}px)`
+                              : undefined,
+                            opacity: touchDragState.isDragging && touchDragState.item?.id === item.id ? 0.7 : 1,
+                            zIndex: touchDragState.isDragging && touchDragState.item?.id === item.id ? 1000 : 1
+                          }}
                         >
                           {item.name}
                         </div>
@@ -1391,8 +1679,17 @@ Transaction Fee (Gas):
                   {/* Green Box - Legit */}
                   <div 
                     className="flex-1 bg-green-900/20 border-4 border-green-500 flex flex-col transition-colors hover:bg-green-900/30"
+                    data-drop-zone="legit"
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, 'legit')}
+                    style={{
+                      borderColor: touchDragState.isDragging && touchDragState.targetBox === 'legit' 
+                        ? '#fbbf24' 
+                        : '#22c55e',
+                      borderWidth: touchDragState.isDragging && touchDragState.targetBox === 'legit' 
+                        ? '6px' 
+                        : '4px'
+                    }}
                   >
                     {/* Pixel check background */}
                     <div className="absolute inset-0 opacity-10 pointer-events-none"
@@ -1415,7 +1712,13 @@ Transaction Fee (Gas):
                           key={item.id} 
                           draggable 
                           onDragStart={(e) => handleDragStart(e, item)}
-                          className="bg-green-500/10 p-3 text-green-300 border-2 border-green-500/50 cursor-grab active:cursor-grabbing hover:bg-green-500/20 flex items-start"
+                          onTouchStart={(e) => handleTouchStart(e, item)}
+                          className="bg-green-500/10 p-3 text-green-300 border-2 border-green-500/50 cursor-grab active:cursor-grabbing hover:bg-green-500/20 flex items-start touch-none select-none"
+                          style={{
+                            userSelect: 'none',
+                            WebkitUserSelect: 'none',
+                            WebkitTouchCallout: 'none'
+                          }}
                         >
                           <CheckIconSmall />
                           <span className="text-sm">{item.name}</span>
