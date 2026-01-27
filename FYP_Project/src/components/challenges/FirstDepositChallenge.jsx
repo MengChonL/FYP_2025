@@ -16,6 +16,74 @@ import BNBIcon from '../../assets/BNB.png';
 import USDTIcon from '../../assets/USDT.png';
 import SolanaIcon from '../../assets/Solana.png';
 
+// === 優化版：滑動條組件 (修復 iPad/手機 觸控問題) ===
+const SlideConfirmButton = ({ onConfirm, text }) => {
+  const [startX, setStartX] = useState(0);
+  const [currentX, setCurrentX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
+  const maxDrag = 240; // 最大滑動距離
+
+  const handleMove = (clientX) => {
+    if (!isDragging || confirmed) return;
+    const newX = Math.max(0, Math.min(clientX - startX, maxDrag));
+    setCurrentX(newX);
+    if (newX > maxDrag * 0.9) {
+      setConfirmed(true);
+      setTimeout(onConfirm, 200); // 觸發確認回調
+    }
+  };
+
+  const addListeners = () => {
+    const move = (e) => handleMove(e.touches ? e.touches[0].clientX : e.clientX);
+    const end = () => { 
+      setIsDragging(false); 
+      if (!confirmed) setCurrentX(0); 
+      window.removeEventListener('mousemove', move); 
+      window.removeEventListener('mouseup', end); 
+      window.removeEventListener('touchmove', move); 
+      window.removeEventListener('touchend', end);
+    };
+    window.addEventListener('mousemove', move); 
+    window.addEventListener('mouseup', end); 
+    window.addEventListener('touchmove', move); 
+    window.addEventListener('touchend', end);
+  };
+
+  return (
+    <div 
+      className="relative w-[300px] h-14 bg-gray-900 rounded-full border border-gray-700 overflow-hidden select-none shadow-xl mx-auto mt-6"
+      // ★ 關鍵修復：加入 touchAction: 'none' 防止瀏覽器將拖拉視為滾動頁面
+      style={{ touchAction: 'none' }}
+    >
+      {/* 背景文字 */}
+      <div className={`absolute inset-0 flex items-center justify-center text-sm font-bold tracking-widest text-cyan-400 opacity-80 animate-pulse transition-opacity ${confirmed ? 'opacity-0' : ''}`}>
+        {text} &gt;&gt;&gt;
+      </div>
+      
+      {/* 進度條背景 */}
+      <div className="absolute top-0 left-0 h-full bg-cyan-500/20 transition-all duration-75" style={{ width: `${currentX + 50}px` }} />
+      
+      {/* 滑塊 */}
+      <div 
+        className={`absolute top-1 bottom-1 w-12 bg-cyan-500 rounded-full shadow-[0_0_15px_rgba(6,182,212,0.8)] cursor-grab active:cursor-grabbing flex items-center justify-center text-white z-10 transition-all duration-75`}
+        style={{ left: `${currentX + 4}px` }}
+        onMouseDown={(e) => { setIsDragging(true); setStartX(e.clientX); addListeners(); }}
+        // ★ 關鍵修復：確保觸摸事件正確獲取第一個觸點
+        onTouchStart={(e) => { 
+          setIsDragging(true); 
+          setStartX(e.touches[0].clientX); 
+          addListeners(); 
+        }}
+      >
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={confirmed ? "M5 13l4 4L19 7" : "M13 7l5 5m0 0l-5 5m5-5H6"} />
+        </svg>
+      </div>
+    </div>
+  );
+};
+
 const FirstDepositChallenge = ({ config }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -1186,6 +1254,17 @@ const FirstDepositChallenge = ({ config }) => {
             }
             onNextLevel={handleNextLevel}
             nextLevelButtonText={language === 'chinese' ? '下一關' : 'Next Level'}
+            // ★ 修改：在下方添加滑動條，且保留上方 Next Level 按鈕
+            customActionComponent={
+              isCorrect ? (
+                <div className="mt-4">
+                  <SlideConfirmButton 
+                    text={language === 'chinese' ? '滑動前往下一關' : 'SLIDE TO CONTINUE'}
+                    onConfirm={handleNextLevel}
+                  />
+                </div>
+              ) : null
+            }
           />
         </div>
       )}
